@@ -19,8 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- * 
- *  modified : added total number of books available and books borrowed by github.com/adeism  */
+ *  modified : added total number of books available and books borrowed by github.com/adeism
  */
 
 // be sure that this file not accessed directly
@@ -42,7 +41,6 @@ class detail
     private $error = false;
     private $output_format = 'html';
     private $template = 'html';
-    private $total_item_available = 0;
     protected $detail_prefix = '';
     protected $detail_suffix = '';
     public $record_title;
@@ -137,9 +135,9 @@ class detail
           if (!is_null($attachment_d['access_limit'])) {
               // need member login access
               if (!utility::isMemberLogin()) {
-                $_output .= '<li class="attachment-locked" style="list-style-image: url(images/labels/locked.png)"><a class="font-italic" href="index.php?p=member&destination=' . (\SLiMS\Url::getSlimsFullUri('#attachment')->encode()) . '">'.__('Please login to see this attachment').'</a></li>';
+                $_output .= '<li class="attachment-locked" style="list-style-image: url(images/labels/locked.png)"><a class="font-italic" href="index.php?p=member&destination='.urlencode($_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING']).'">'.__('Please login to see this attachment').'</a></li>';
                 continue;
-              // member type access check 
+              // member type access check
               } else if (utility::isMemberLogin() && !in_array($_SESSION['m_member_type_id'], unserialize($attachment_d['access_limit']))) {
                 $_output .= '<li class="attachment-locked cursor-pointer" style="list-style-image: url(images/labels/locked.png)">'. __('You have no authorization to download this file.') . '</li>';
                 continue;
@@ -226,7 +224,9 @@ HTML;
      *
      * @return  string
      */ 
-    /* added total number of books available and books borrowed by github.com/adeism  */
+
+     /*  modified : added total number of books available and books borrowed by github.com/adeism  */
+
     public function getItemCopy() {
       global $sysconf;
       $_output = '';
@@ -241,8 +241,8 @@ HTML;
       $_output .= '<tr>';
       $_output .= '<th>Call Number</th>';
       $_output .= '<th>Location</th>';
-      $_output .= '<th>Available</th>';
-      $_output .= '<th>On Loan</th>';
+      $_output .= '<th class="text-center">Available</th>';
+      $_output .= '<th class="text-center">On Loan</th>';
       $_output .= '</tr>';
       
       foreach ($copies as $copy_d) {
@@ -280,8 +280,8 @@ HTML;
         $_output .= '<tr>';
         $_output .= '<td class="biblio-call-number">'.$copy_d['call_number'].'</td>';
         $_output .= '<td class="biblio-location">'.$location.'</td>';
-        $_output .= '<td>'.$counts['available'].'</td>'; // Display available count
-        $_output .= '<td>'.$counts['on_loan'].'</td>'; // Display on_loan count
+        $_output .= '<td class="text-center">'.$counts['available'].'</td>'; // Display available count
+        $_output .= '<td class="text-center">'.$counts['on_loan'].'</td>'; // Display on_loan count
         $_output .= '</tr>';
       }
     
@@ -289,7 +289,6 @@ HTML;
       return $_output;
     }
     
-    /*  end of added total number of books available and books borrowed by github.com/adeism  */
 
 
     /**
@@ -372,7 +371,7 @@ HTML;
           foreach ($biblio_custom_fields as $custom_field) {
             if (isset($custom_field['is_public']) && $custom_field['is_public'] == '1' && isset($data[$custom_field['dbfield']])) {
 
-              $data_field = unserialize($custom_field['data']??'');
+              $data_field = unserialize($custom_field['data']);
               $data_record  = $data[$custom_field['dbfield']];
 
               switch ($custom_field['type']) {
@@ -435,8 +434,7 @@ HTML;
         $this->metadata = '<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/" />';
         $this->metadata .= '<meta name="DC.title" content="'.$this->record_title.'" />';
         $this->metadata .= '<meta name="DC.identifier" content="'.$this->record_detail['isbn_issn'].'" />';
-        $this->metadata .= '<meta name="DC.format" content="'.$this->record_detail['gmd_name'].'" />';
-        $this->metadata .= '<meta name="DC.type" content="'.$this->record_detail['gmd_name'].'" />';
+
         $this->metadata .= '<meta name="DC.language" content="'.$this->record_detail['language_name'].'" />';
         $this->metadata .= '<meta name="DC.publisher" content="'.$this->record_detail['publisher_name'].'" />';
         $this->metadata .= '<meta name="DC.date" content="'.$this->record_detail['publish_year'].'" />';
@@ -448,6 +446,20 @@ HTML;
         $this->metadata .= '<meta name="Series Title" content="'.$this->record_detail['series_title'].'" />';
         $this->metadata .= '<meta name="Edition" content="'.$this->record_detail['edition'].'" />';
         $this->metadata .= '<meta name="Call Number" content="'.$this->record_detail['call_number'].'" />';
+
+        // check image
+        if (!empty($this->record_detail['image'])) {
+          if ($sysconf['tg']['type'] == 'minigalnano') {
+            $this->record_detail['image_src'] = 'lib/minigalnano/createthumb.php?filename=images/docs/'.urlencode($this->record_detail['image']).'&amp;width=200';
+            $this->record_detail['image'] = '<img loading="lazy" itemprop="image" alt="'.sprintf('Image of %s', $this->record_title).'" src="./'.$this->record_detail['image_src'].'" border="0" alt="'.$this->record_detail['title'].'" />';
+          }
+        } else {
+          $this->record_detail['image_src'] = "images/default/image.png";
+          $this->record_detail['image'] = '<img src="./'.$this->record_detail['image_src'].'" alt="No image available for this title" border="0" alt="'.$this->record_detail['title'].'" />';
+        }
+
+        // get image source
+        $this->image_src = $this->record_detail['image_src'];
 
         // get the authors data
         $authors = '';
@@ -476,21 +488,6 @@ HTML;
         $this->record_detail['file_att'] = $this->getAttachments();
         $this->record_detail['related'] = $this->getRelatedBiblio();
         $this->record_detail['biblio_custom'] = $this->getBiblioCustom();
-
-        // check image
-        if (!empty($this->record_detail['image'])) {
-          if ($sysconf['tg']['type'] == 'minigalnano') {
-            $isItemAvailable = $this->total_item_available > 0;
-            $this->record_detail['image_src'] = 'lib/minigalnano/createthumb.php?filename=images/docs/'.urlencode($this->record_detail['image']).'&amp;width=200';
-            $this->record_detail['image'] = '<img class="' . ($isItemAvailable ? 'available' : 'not-available') . '" title="' . ($isItemAvailable ? $this->record_title : __('Items is not available')) . '" loading="lazy" itemprop="image" alt="'.sprintf('Image of %s', $this->record_title).'" src="./'.$this->record_detail['image_src'].'" border="0" alt="'.$this->record_detail['title'].'" />';
-          }
-        } else {
-          $this->record_detail['image_src'] = "images/default/image.png";
-          $this->record_detail['image'] = '<img src="./'.$this->record_detail['image_src'].'" alt="No image available for this title" border="0" alt="'.$this->record_detail['title'].'" />';
-        }
-
-        // get image source
-        $this->image_src = $this->record_detail['image_src'];
 
         if ($sysconf['social_shares']) {
         // share buttons
