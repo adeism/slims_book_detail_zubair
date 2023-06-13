@@ -13,4 +13,4 @@ $plugin = \SLiMS\Plugins::getInstance();
 
 
 // registering our plugin into bibliography module
-$plugins->registerMenu('opac', 'detail book', __DIR__ . '/detail.inc.php');
+$plugin->register('opac', 'show detail', __DIR__ . '/detail.inc.php');
