@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- *  modified : added total number of books available and books borrowed by github.com/adeism
+ *
  */
 
 // be sure that this file not accessed directly
@@ -250,7 +250,7 @@ HTML;
         $loan_stat_q = $this->db->query('SELECT due_date FROM loan AS l
             LEFT JOIN item AS i ON l.item_code=i.item_code
             WHERE l.item_code=\''.$copy_d['item_code'].'\' AND is_lent=1 AND is_return=0');
-    
+      
         // Store location and count
         $location = $copy_d['location_name'];
         if (trim($copy_d['site']) != "") {
@@ -259,10 +259,11 @@ HTML;
         if (!isset($locations[$location])) {
           $locations[$location] = array(
             'available' => 0,
-            'on_loan' => 0
+            'on_loan' => 0,
+            'call_number' => $copy_d['call_number'] // Set the call_number for the location
           );
         }
-    
+      
         if ($loan_stat_q->num_rows > 0) {
           // Item is on loan
           $locations[$location]['on_loan']++;
@@ -273,17 +274,19 @@ HTML;
           // Item is available
           $locations[$location]['available']++;
         }
+      
         $loan_stat_q->free_result();
       }
-    
+      
       foreach ($locations as $location => $counts) {
         $_output .= '<tr>';
-        $_output .= '<td class="biblio-call-number">'.$copy_d['call_number'].'</td>';
+        $_output .= '<td class="biblio-call-number">' . $counts['call_number'] . '</td>';
         $_output .= '<td class="biblio-location">'.$location.'</td>';
         $_output .= '<td class="text-center">'.$counts['available'].'</td>'; // Display available count
         $_output .= '<td class="text-center">'.$counts['on_loan'].'</td>'; // Display on_loan count
         $_output .= '</tr>';
       }
+      
     
       $_output .= '</table>';
       return $_output;
